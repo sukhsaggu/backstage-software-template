@@ -1,16 +1,13 @@
-# Notice the v1beta3 version
 apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
-# some metadata about the template itself
 metadata:
-  name: python-app
-  title: python flask template
-  description: provisons and minimally configures a python flask app
+  name: python-template
+  title: Python flask template
+  description: Provisions a minimalistic flask application
 spec:
   owner: development
   type: service
 
-  # these are the steps which are rendered in the frontend with the form input
   parameters:
     - title: Fill in some steps
       required:
@@ -18,20 +15,18 @@ spec:
         - environment
       properties:
         component_id:
-          title: Component Name
+          title: Component name
           type: string
           description: Provide a component (microservice) name
-          pattern: '^[a-zA-Z][a-ZA-Z0-9]*)(-[a-zA-Z][a-zA-Z0-9]*)*$'
+          pattern: '^([a-zA-Z][a-zA-Z0-9]*)(-[a-zA-Z0-9]+)*$'
         environment:
           title: Environment
           type: string
-          description: The environment this component will be deployed to
+          description: The environment where this component will be deployed
           enum:
             - dev
-            - qa
             - prod
 
-  # here's the steps that are executed in series in the scaffolder backend
   steps:
     - id: fetch-base
       name: Fetch Base
@@ -39,37 +34,28 @@ spec:
       input:
         url: ./template
         values:
-          name: ${{ parameters.name }}
-          owner: ${{ parameters.owner }}
-
-    - id: fetch-docs
-      name: Fetch Docs
-      action: fetch:plain
-      input:
-        targetPath: ./community
-        url: https://github.com/backstage/community/tree/main/backstage-community-sessions
+          app_name: ${{parameters.component_id}}
+          app_env: ${{parameters.environment}}
 
     - id: publish
       name: Publish
       action: publish:github
       input:
-        allowedHosts: ['github.com']
-        description: This is ${{ parameters.name }}
-        repoUrl: ${{ parameters.repoUrl }}
-        defaultBranch: 'main'
+        allowedHosts:
+          - github.com
+        description: This is ${{ parameters.component_id }}
+        repoUrl: github.com?owner=ricardoandre-97&repo=${{parameters.component_id}}
+        protectDefaultBranch: false
+        repoVisibility: public
 
     - id: register
       name: Register
       action: catalog:register
       input:
         repoContentsUrl: ${{ steps['publish'].output.repoContentsUrl }}
-        catalogInfoPath: '/catalog-info.yaml'
+        catalogInfoPath: "/catalog-info.yaml"
 
-  # some outputs which are saved along with the job for use in the frontend
   output:
     links:
       - title: Repository
         url: ${{ steps['publish'].output.remoteUrl }}
-      - title: Open in catalog
-        icon: catalog
-        entityRef: ${{ steps['register'].output.entityRef }}
