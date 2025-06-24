@@ -1,0 +1,84 @@
+name: ${{values.app_name}}-cicd
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - src/**
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Shorten SHA
+        shell: bash
+        run: |
+          echo "COMMIT_ID=${GITHUB_SHA::6}" >> "$GITHUB_ENV"
+      -
+        name: Checkout
+        uses: actions/checkout@v4
+      -
+        name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ '${{ secrets.DOCKERHUB_USERNAME }}' }}
+          password: ${{ '${{ secrets.DOCKERHUB_TOKEN }}' }} 
+
+      -
+        name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          # context: .
+          push: true
+          tags: sukhsaggu2020/${{values.app_name}}:${{ '${{ env.COMMIT_ID }}' }}
+
+    outputs:
+      commit_id: ${{ '${{ env.COMMIT_ID }}' }}
+  
+  cd:
+    needs: ci
+    runs-on: self-hosted
+    steps:
+      
+      - uses: actions/checkout@v3
+      
+      
+      - name: Modify values file.
+        shell: bash
+        run: |
+          echo ${{ needs.ci.outputs.commit_id }}
+          pip install yq
+          yq -Yi '.image.tag = "${{ needs.ci.outputs.commit_id }}"' charts/${{values.app_name}}/values-${{values.app_env}}.yaml
+      
+      - name: Commit changes
+        uses: EndBug/add-and-commit@v9
+        with:
+          # author_name: Your name
+          # author_email: mail@example.com
+          message: "Update image tag to ${{ needs.ci.outputs.commit_id }}"
+          # add: |
+          #   charts/python-app/values.yaml
+
+      
+      - name: Install ArgoCD
+        shell: bash
+        run: |
+          sudo curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+          sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
+          which argocd
+        # run: |
+        #   curl -ksSL -o argocd https://argocd-server.argocd/download/argocd-linux-amd64
+        #   chmod +x argocd
+        #   sudo mv ./argocd /usr/local/bin/argocd
+        #   argocd version
+
+      - name: Argocd app sync
+        shell: bash
+        run: |
+          argocd login argocd-server.argocd \
+          --insecure \
+          --grpc-web \
+          --username admin \
+          --password ${{ '${{ secrets.ARGOCD_PASSWORD }}' }}
+          argocd app sync ${{values.app_name}}
