@@ -15,6 +15,7 @@ jobs:
         shell: bash
         run: |
           echo "COMMIT_ID=${GITHUB_SHA::6}" >> "$GITHUB_ENV"
+          echo "commit_id=${GITHUB_SHA::6}" >> "$GITHUB_OUTPUT"
       -
         name: Checkout
         uses: actions/checkout@v4
@@ -35,7 +36,7 @@ jobs:
 
     outputs:
       # commit_id: ${{ '${{ env.COMMIT_ID }}' }}
-      commit_id: ${{ env.COMMIT_ID }}
+      commit_id: ${{ steps.commit.outputs.commit_id }}
   
   cd:
     needs: ci
