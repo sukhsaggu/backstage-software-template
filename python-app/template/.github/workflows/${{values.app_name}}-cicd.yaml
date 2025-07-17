@@ -35,8 +35,8 @@ jobs:
           tags: sukhsaggu2020/${{values.app_name}}:${{ '${{ env.COMMIT_ID }}' }}
 
     outputs:
-      # commit_id: ${{ '${{ env.COMMIT_ID }}' }}
-      commit_id: ${{ steps.commit.outputs.commit_id }}
+      commit_id: ${{ '${{ env.COMMIT_ID }}' }}
+      # commit_id: ${{ steps.commit.outputs.commit_id }}
   
   cd:
     needs: ci
